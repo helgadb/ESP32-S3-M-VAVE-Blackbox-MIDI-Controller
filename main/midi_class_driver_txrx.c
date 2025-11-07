@@ -269,8 +269,8 @@ static void action_get_info(class_driver_t *driver_obj) {
     ESP_LOGI(DRIVER_TAG, "Getting device information");
     usb_device_info_t dev_info;
     ESP_ERROR_CHECK(usb_host_device_info(driver_obj->dev_hdl, &dev_info));
-    ESP_LOGI(DRIVER_TAG, "\t%s speed", (dev_info.speed == USB_SPEED_LOW) ? "Low" : "Full");
-    ESP_LOGI(DRIVER_TAG, "\tbConfigurationValue %d", dev_info.bConfigurationValue);
+    ESP_LOGI(DRIVER_TAG, "\\t%s speed", (dev_info.speed == USB_SPEED_LOW) ? "Low" : "Full");
+    ESP_LOGI(DRIVER_TAG, "\\tbConfigurationValue %d", dev_info.bConfigurationValue);
     driver_obj->actions &= ~ACTION_GET_DEV_INFO;
     driver_obj->actions |= ACTION_GET_DEV_DESC;
 }
@@ -505,7 +505,7 @@ void class_driver_task(void *arg)
         TickType_t current_time = xTaskGetTickCount();
         if ((current_time - last_tx_process_time) >= tx_process_interval) {
             if (driver_obj.ready_for_tx) {
-                process_tx_queue(&driver_obj);
+                process_tx_queue(global_driver_instance);
             }
             last_tx_process_time = current_time;
         }

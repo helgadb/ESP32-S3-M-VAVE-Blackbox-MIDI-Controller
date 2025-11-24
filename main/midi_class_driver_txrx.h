@@ -18,6 +18,16 @@ void midi_driver_print_status(void);
 // Envia dados MIDI brutos via USB
 bool midi_send_data(const uint8_t *data, size_t length);
 
+// Função que pode ser usada para processar dados USB e repassar para UART.
+// Implementação disponível na biblioteca midi_uart; se ausente, é uma stub.
+void process_usb_rx_for_uart(const uint8_t *data, size_t length);
+
+// Estrutura de mensagem MIDI (usada para filas públicas)
+typedef struct {
+    uint8_t data[4];
+    size_t length;
+} midi_message_t;
+
 // ===== Função da tarefa principal do driver =====
 void class_driver_task(void *arg);
 

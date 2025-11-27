@@ -1,3 +1,5 @@
+// midi_storage.c
+
 #include "midi_storage.h"
 #include "globals.h"
 #include "esp_log.h"
@@ -104,4 +106,61 @@ void save_midi_commands(void)
     }
 
     nvs_close(nvs_handle);
+}
+
+// ======================================================
+//  USB MODE STORAGE
+// ======================================================
+
+#define USB_MODE_KEY "usb_mode"
+
+bool save_usb_mode(usb_operation_mode_t mode)
+{
+    nvs_handle_t nvs_handle;
+    esp_err_t err = nvs_open("midi_storage", NVS_READWRITE, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error opening NVS for USB mode: %s", esp_err_to_name(err));
+        return false;
+    }
+
+    err = nvs_set_u8(nvs_handle, USB_MODE_KEY, (uint8_t)mode);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Error writing USB mode: %s", esp_err_to_name(err));
+        nvs_close(nvs_handle);
+        return false;
+    }
+
+    err = nvs_commit(nvs_handle);
+    nvs_close(nvs_handle);
+
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "USB mode saved: %u", mode);
+        return true;
+    }
+
+    ESP_LOGE(TAG, "Commit failed saving USB mode");
+    return false;
+}
+
+usb_operation_mode_t load_usb_mode(void)
+{
+    nvs_handle_t nvs_handle;
+    uint8_t mode_u8 = USB_MODE_HOST;  // default
+
+    esp_err_t err = nvs_open("midi_storage", NVS_READONLY, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "USB mode not found, using default HOST.");
+        return USB_MODE_HOST;
+    }
+
+    err = nvs_get_u8(nvs_handle, USB_MODE_KEY, &mode_u8);
+    nvs_close(nvs_handle);
+
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "Loaded USB mode: %u", mode_u8);
+        return (usb_operation_mode_t)mode_u8;
+    }
+
+    ESP_LOGW(TAG, "USB mode not stored, using HOST default");
+    return USB_MODE_HOST;
 }

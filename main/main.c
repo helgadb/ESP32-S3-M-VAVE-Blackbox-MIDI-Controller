@@ -78,29 +78,48 @@ static const uint8_t s_midi_cfg_desc[] = {
 void app_main(void)
 {
     ESP_LOGI(TAG, "Booting controller…");
+    init_nvs();
 
-    // --------------------------
-    // Configura GPIO de seleção
-    // --------------------------
-    gpio_config_t io = {
-        .pin_bit_mask = 1ULL << MODE_BUTTON,
+    // --- Configura GPIOs ---
+    gpio_config_t io6 = {
+        .pin_bit_mask = 1ULL << GPIO_NUM_6,
         .mode = GPIO_MODE_INPUT,
-        .pull_up_en = GPIO_PULLUP_ENABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
+        .pull_up_en = GPIO_PULLUP_ENABLE
     };
-    gpio_config(&io);
+    gpio_config(&io6);
 
-    current_usb_mode = (gpio_get_level(MODE_BUTTON) == 0) ? USB_MODE_DEVICE : USB_MODE_HOST;
-    
-    ESP_LOGW(TAG, "USB mode selected at boot: %s",
-         (current_usb_mode == USB_MODE_DEVICE) ? "DEVICE (TinyUSB)" : "HOST (USB Host Stack)");
+    gpio_config_t io17 = {
+        .pin_bit_mask = 1ULL << GPIO_NUM_17,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE
+    };
+    gpio_config(&io17);
+
+    // --- Verifica botões ---
+    bool pressed_6  = (gpio_get_level(GPIO_NUM_6)  == 0);
+    bool pressed_17 = (gpio_get_level(GPIO_NUM_17) == 0);
+
+    if (pressed_6) {
+        current_usb_mode = USB_MODE_DEVICE;
+        save_usb_mode(USB_MODE_DEVICE);
+        ESP_LOGW(TAG, "Boot override: DEVICE mode selected and saved.");
+    }
+    else if (pressed_17) {
+        current_usb_mode = USB_MODE_HOST;
+        save_usb_mode(USB_MODE_HOST);
+        ESP_LOGW(TAG, "Boot override: HOST mode selected and saved.");
+    }
+    else {
+        current_usb_mode = load_usb_mode();
+        ESP_LOGW(TAG, "Boot from NVS: %s",
+                current_usb_mode == USB_MODE_DEVICE ? "DEVICE" : "HOST");
+    }
 
     // ------------------------------------
     // Inicializações comuns aos dois modos
     // ------------------------------------
     init_power_management();
-    init_nvs();
+    
     load_midi_commands();
     init_oled();
     init_navigation_buttons();

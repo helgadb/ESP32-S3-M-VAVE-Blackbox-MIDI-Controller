@@ -17,5 +17,11 @@
     "--compile-commands-dir=c:\\Users\\Helga\\VSCode\\blackbox\\build"
   ],
   "idf.flashType": "UART",
-  "idf.monitorPort": "COM3"
+  "idf.monitorPort": "COM3",
+  "files.associations": {
+    "stdbool.h": "c",
+    "esp_log.h": "c",
+    "semphr.h": "c",
+    "midi_device_tx.h": "c"
+  }
 }

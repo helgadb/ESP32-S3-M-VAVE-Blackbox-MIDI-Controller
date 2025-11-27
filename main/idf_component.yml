@@ -1,6 +1,6 @@
 ## IDF Component Manager Manifest File
 dependencies:
   espressif/usb_host_hid: "==1.0.1"
-  ## Required IDF version
+  espressif/esp_tinyusb: "^1.1"
   idf:
-    version: ">=4.1.0"
+    version: "^5.0"

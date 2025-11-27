@@ -7,6 +7,7 @@
 #include "freertos/task.h"
 #include <string.h>
 #include "power_management.h"
+#include "midi_tx_router.h"
 
 static const char *TAG = "MIDI_BTN";
 
@@ -74,11 +75,7 @@ void button_check_task(void *arg)
                             current_commands[i].data[0], current_commands[i].data[1],
                             current_commands[i].data[2], current_commands[i].data[3]);
 
-                    if (midi_driver_ready_for_tx()) {
-                        midi_send_data(current_commands[i].data, sizeof(current_commands[i].data));
-                    } else {
-                        ESP_LOGI(TAG, "Driver not ready");
-                    }
+                    midi_tx_router_send(current_commands[i].data, sizeof(current_commands[i].data));
 
                     last_send_times[i] = current_time;
                 }

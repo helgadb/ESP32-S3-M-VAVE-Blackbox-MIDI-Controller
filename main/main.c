@@ -1,3 +1,8 @@
+// main.c — ESP32-S3 USB HOST / USB DEVICE MIDI Controller
+// Compatible with esp_tinyusb (Device Mode) + USB Host Stack
+// DEVICE mode chosen by holding GPIO6 low at boot.
+// All MIDI transmissions routed via midi_tx_router.c
+
 #include "globals.h"
 #include "midi_storage.h"
 #include "oled_display.h"
@@ -6,135 +11,159 @@
 #include "power_management.h"
 #include "usb_daemon.h"
 #include "midi_class_driver_txrx.h"
+#include "midi_device_tx.h"
+#include "midi_tx_router.h"
 
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "driver/gpio.h"
 #include "esp_log.h"
+#include "tinyusb.h"     // esp_tinyusb core
+#include "tusb.h"  // MIDI class
+#include "esp_timer.h"
 
 static const char *TAG = "MAIN";
 
-#define DAEMON_TASK_PRIORITY     2
-#define CLASS_TASK_PRIORITY      3
-#define BUTTON_TASK_PRIORITY     3
-#define NAVIGATION_TASK_PRIORITY 3
-#define POWER_TASK_PRIORITY      1
-
-//====================================================
-//   USB → UART fallback desativado neste dispositivo
-//====================================================
-void process_usb_rx_for_uart(const uint8_t *data, size_t length)
+void usb_debug_task(void *arg)
 {
-    // Este equipamento NÃO possui UART
-    // Mantemos a função para compatibilidade com o driver
-    (void)data;
-    (void)length;
+    while (1) {
+        ESP_LOGI("TINYUSB", "tud_ready=%d | tud_midi_mounted=%d",
+                 tud_ready(), tud_midi_mounted());
+
+        vTaskDelay(pdMS_TO_TICKS(1500));
+    }
 }
 
-//====================================================
-//                APP MAIN
-//====================================================
+// GPIO que seleciona o modo (0 = DEVICE, 1 = HOST)
+#define MODE_BUTTON GPIO_NUM_6
+
+// =======================================================
+//   USB MIDI DEVICE DESCRIPTORS (obrigatórios no S3)
+// =======================================================
+
+enum {
+    ITF_NUM_MIDI = 0,
+    ITF_NUM_MIDI_STREAMING,
+    ITF_COUNT
+};
+
+enum {
+    EPNUM_MIDI = 1
+};
+
+#define TUSB_DESCRIPTOR_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_MIDI_DESC_LEN)
+
+static const char *s_str_desc[] = {
+    (char[]){0x09, 0x04},     // 0: Idioma (0x0409)
+    "Espressif Systems",      // 1: Manufacturer
+    "ESP32-S3 MIDI Device",   // 2: Product
+    "0001",                   // 3: Serial
+    "MIDI Interface",         // 4: Interface Name
+};
+
+// Full-speed configuration descriptor (obrigatório!)
+static const uint8_t s_midi_cfg_desc[] = {
+    TUD_CONFIG_DESCRIPTOR(1, ITF_COUNT, 0, TUSB_DESCRIPTOR_TOTAL_LEN, 0, 100),
+    TUD_MIDI_DESCRIPTOR(ITF_NUM_MIDI, 0, EPNUM_MIDI, (0x80 | EPNUM_MIDI), 64),
+};
+
+
+
+// =======================================================
+//  APP MAIN
+// =======================================================
+
 void app_main(void)
 {
-    ESP_LOGI(TAG, "Starting system (USB-only mode)");
+    ESP_LOGI(TAG, "Booting controller…");
 
-    // Inicializações originais do projeto
+    // --------------------------
+    // Configura GPIO de seleção
+    // --------------------------
+    gpio_config_t io = {
+        .pin_bit_mask = 1ULL << MODE_BUTTON,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&io);
+
+    current_usb_mode = (gpio_get_level(MODE_BUTTON) == 0) ? USB_MODE_DEVICE : USB_MODE_HOST;
+    
+    ESP_LOGW(TAG, "USB mode selected at boot: %s",
+         (current_usb_mode == USB_MODE_DEVICE) ? "DEVICE (TinyUSB)" : "HOST (USB Host Stack)");
+
+    // ------------------------------------
+    // Inicializações comuns aos dois modos
+    // ------------------------------------
     init_power_management();
-    last_cpu_activity_time = xTaskGetTickCount();
-    last_display_activity_time = xTaskGetTickCount();
-
     init_nvs();
     load_midi_commands();
-
     init_oled();
-    display_on = true;
-
     init_navigation_buttons();
 
-    SemaphoreHandle_t signaling_sem = xSemaphoreCreateBinary();
+    display_on = true;
 
-    //====================================================
-    //           TAREFAS DO USB MIDI
-    //====================================================
-    TaskHandle_t daemon_task_hdl;
-    TaskHandle_t class_driver_task_hdl;
-    TaskHandle_t button_task_hdl;
-    TaskHandle_t navigation_task_hdl;
-    TaskHandle_t power_management_hdl;
+    // ===================================================
+    //                  USB DEVICE MODE
+    // ===================================================
+    if (current_usb_mode) {
 
-    // USB Host Daemon
-    xTaskCreatePinnedToCore(
-        host_lib_daemon_task,
-        "daemon",
-        4096,
-        (void*)signaling_sem,
-        DAEMON_TASK_PRIORITY,
-        &daemon_task_hdl,
-        0
-    );
+        ESP_LOGW(TAG, "========= ENTERING USB DEVICE MODE =========");
+        ESP_LOGI(TAG, "Inicializando TinyUSB…");
 
-    // Driver USB MIDI
-    xTaskCreatePinnedToCore(
-        class_driver_task,
-        "usb_midi_class",
-        8192,
-        (void*)signaling_sem,
-        CLASS_TASK_PRIORITY,
-        &class_driver_task_hdl,
-        0
-    );
+        // Configuração mínima obrigatória
+        const tinyusb_config_t tusb_cfg = {
+            .device_descriptor       = NULL,
+            .string_descriptor       = s_str_desc,
+            .configuration_descriptor = s_midi_cfg_desc,
+            .external_phy            = false
+        };
 
-    //====================================================
-    //      Demais tarefas do projeto original
-    //====================================================
+        esp_err_t err = tinyusb_driver_install(&tusb_cfg);
+        ESP_ERROR_CHECK(err);
 
-    // Botões MIDI
-    xTaskCreatePinnedToCore(
-        button_check_task,
-        "buttons",
-        4096,
-        NULL,
-        BUTTON_TASK_PRIORITY,
-        &button_task_hdl,
-        1
-    );
+        ESP_LOGI(TAG, "tinyusb_driver_install OK");
 
-    // Navegação de menus
-    xTaskCreatePinnedToCore(
-        navigation_button_task,
-        "navigation",
-        4096,
-        NULL,
-        NAVIGATION_TASK_PRIORITY,
-        &navigation_task_hdl,
-        1
-    );
+        // Tasks da aplicação
+        xTaskCreatePinnedToCore(button_check_task, "buttons", 4096, NULL, 3, NULL, 1);
+        xTaskCreatePinnedToCore(navigation_button_task, "navigation", 4096, NULL, 3, NULL, 1);
+        xTaskCreatePinnedToCore(power_management_task, "pwr_mgmt", 4096, NULL, 1, NULL, 1);
 
-    // Gerenciamento de energia
-    xTaskCreatePinnedToCore(
-        power_management_task,
-        "pwr_mgmt",
-        4096,
-        NULL,
-        POWER_TASK_PRIORITY,
-        &power_management_hdl,
-        1
-    );
+        // LOG EXTRA PARA DEBUG
+        xTaskCreatePinnedToCore(
+            usb_debug_task,
+            "usb_debug",
+            4096,
+            NULL,
+            2,
+            NULL,
+            1
+        );
 
-    ESP_LOGI(TAG, "System started - USB-only, no UART");
+        ESP_LOGW(TAG, "USB Device Mode ativo. Aguarde o PC montar o dispositivo.");
 
-    // Mostra comandos carregados
-    for (int i = 0; i < BUTTON_COUNT; i++) {
-        ESP_LOGI(TAG, "Button %d CMD: %02X %02X %02X %02X",
-                 i + 1,
-                 current_commands[i].data[0],
-                 current_commands[i].data[1],
-                 current_commands[i].data[2],
-                 current_commands[i].data[3]);
+        while (1) vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
-    // Loop principal (baixa prioridade)
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+    // ===================================================
+    //                  USB HOST MODE
+    // ===================================================
+    ESP_LOGW(TAG, "========= ENTERING USB HOST MODE =========");
+
+    SemaphoreHandle_t sem = xSemaphoreCreateBinary();
+
+    xTaskCreatePinnedToCore(host_lib_daemon_task, "daemon", 4096, sem, 2, NULL, 0);
+    xTaskCreatePinnedToCore(class_driver_task, "usb_class", 8192, sem, 3, NULL, 0);
+
+    xTaskCreatePinnedToCore(button_check_task, "buttons", 4096, NULL, 3, NULL, 1);
+    xTaskCreatePinnedToCore(navigation_button_task, "navigation", 4096, NULL, 3, NULL, 1);
+    xTaskCreatePinnedToCore(power_management_task, "pwr_mgmt", 4096, NULL, 1, NULL, 1);
+
+    ESP_LOGI(TAG, "USB Host Mode ready.");
+
+    while (1) vTaskDelay(pdMS_TO_TICKS(1000));
 }

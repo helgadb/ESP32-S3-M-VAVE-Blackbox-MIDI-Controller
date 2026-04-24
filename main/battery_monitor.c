@@ -11,9 +11,9 @@
 #define BATTERY_CTRL_PIN   GPIO_NUM_2
 #define BATTERY_ADC_PIN    ADC_CHANNEL_0
 #define MIN_VOLTAGE        3.3f
-#define MAX_VOLTAGE        4.2f
+#define MAX_VOLTAGE        3.8f
 
-static const char *TAG = "BATTERY";
+//static const char *TAG = "BATTERY";
 static adc_oneshot_unit_handle_t adc_handle = NULL;
 static bool low_battery_warning_shown = false;
 static uint8_t last_battery_percent = 100;
@@ -41,7 +41,7 @@ void battery_monitor_init(void) {
     };
     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc_handle, BATTERY_ADC_PIN, &channel_config));
     
-    ESP_LOGI(TAG, "Inicializado");
+    //ESP_LOGI(TAG, "Inicializado");
 }
 
 static float battery_read_voltage(void) {
@@ -75,7 +75,7 @@ void battery_show_warning_once(void) {
     g_battery_percent = battery_percent;
     
     if (battery_percent <= LOW_BATTERY_THRESHOLD && !low_battery_warning_shown) {
-        ESP_LOGW(TAG, "⚠️ Exibindo tela de bateria baixa: %d%%", battery_percent);
+        //ESP_LOGW(TAG, "⚠️ Exibindo tela de bateria baixa: %d%%", battery_percent);
         low_battery_warning_shown = true;
         
         // Limpa a tela completamente
@@ -98,7 +98,7 @@ void battery_show_warning_once(void) {
 // Função para restaurar a tela normal (chamada quando usuário interage)
 void battery_restore_normal_screen(void) {
     if (low_battery_warning_shown) {
-        ESP_LOGI(TAG, "Restaurando tela normal");
+        //ESP_LOGI(TAG, "Restaurando tela normal");
         low_battery_warning_shown = false;
         
         if (display_initialized && display_on) {
@@ -111,7 +111,7 @@ void battery_restore_normal_screen(void) {
 
 void battery_monitor_update(void) {
     uint8_t battery_percent = battery_monitor_get_percentage();
-    ESP_LOGI(TAG, "Bateria: %d%%", battery_percent);
+    //ESP_LOGI(TAG, "Bateria: %d%%", battery_percent);
     
     g_battery_percent = battery_percent;
     
@@ -122,7 +122,7 @@ void battery_monitor_update(void) {
     
     // Se a bateria recuperou acima do limiar, reseta a flag
     if (battery_percent > LOW_BATTERY_THRESHOLD && low_battery_warning_shown) {
-        ESP_LOGI(TAG, "✅ Bateria recuperou: %d%% - Resetando flag", battery_percent);
+       // ESP_LOGI(TAG, "✅ Bateria recuperou: %d%% - Resetando flag", battery_percent);
         low_battery_warning_shown = false;
     }
     
@@ -131,7 +131,7 @@ void battery_monitor_update(void) {
 
 // Função chamada quando o display é reativado
 void battery_check_and_warn(void) {
-    ESP_LOGI(TAG, "Display reativado - verificando bateria");
+    //ESP_LOGI(TAG, "Display reativado - verificando bateria");
     low_battery_warning_shown = false;  // Reseta para permitir nova verificação
     battery_show_warning_once();
 }

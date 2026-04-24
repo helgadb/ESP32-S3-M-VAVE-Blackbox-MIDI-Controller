@@ -25,7 +25,7 @@
 #include "tusb.h"  // MIDI class
 #include "esp_timer.h"
 
-static const char *TAG = "MAIN";
+//static const char *TAG = "MAIN";
 
 // =======================================================
 //   TASK DA BATERIA 
@@ -41,8 +41,8 @@ static void battery_monitoring_task(void *arg)
 void usb_debug_task(void *arg)
 {
     while (1) {
-        ESP_LOGI("TINYUSB", "tud_ready=%d | tud_midi_mounted=%d",
-                 tud_ready(), tud_midi_mounted());
+        //ESP_LOGI("TINYUSB", "tud_ready=%d | tud_midi_mounted=%d",
+        //         tud_ready(), tud_midi_mounted());
 
         vTaskDelay(pdMS_TO_TICKS(1500));
     }
@@ -89,11 +89,11 @@ static const uint8_t s_midi_cfg_desc[] = {
 
 void app_main(void)
 { 
-    ESP_LOGI(TAG, "=== INICIANDO BLACKBOX MIDI CONTROLLER ===");
-    ESP_LOGI(TAG, "Firmware versao: 1.0");
-    ESP_LOGI(TAG, "Compilado em: %s %s", __DATE__, __TIME__);
+    //ESP_LOGI(TAG, "=== INICIANDO BLACKBOX MIDI CONTROLLER ===");
+    //ESP_LOGI(TAG, "Firmware versao: 1.0");
+    //ESP_LOGI(TAG, "Compilado em: %s %s", __DATE__, __TIME__);
     
-    ESP_LOGI(TAG, "Booting controller…");
+    //ESP_LOGI(TAG, "Booting controller…");
 
     init_nvs();
 
@@ -119,17 +119,17 @@ void app_main(void)
     if (pressed_6) {
         current_usb_mode = USB_MODE_DEVICE;
         save_usb_mode(USB_MODE_DEVICE);
-        ESP_LOGW(TAG, "Boot override: DEVICE mode selected and saved.");
+        //ESP_LOGW(TAG, "Boot override: DEVICE mode selected and saved.");
     }
     else if (pressed_17) {
         current_usb_mode = USB_MODE_HOST;
         save_usb_mode(USB_MODE_HOST);
-        ESP_LOGW(TAG, "Boot override: HOST mode selected and saved.");
+        //ESP_LOGW(TAG, "Boot override: HOST mode selected and saved.");
     }
     else {
         current_usb_mode = load_usb_mode();
-        ESP_LOGW(TAG, "Boot from NVS: %s",
-                current_usb_mode == USB_MODE_DEVICE ? "DEVICE" : "HOST");
+        //ESP_LOGW(TAG, "Boot from NVS: %s",
+        //        current_usb_mode == USB_MODE_DEVICE ? "DEVICE" : "HOST");
     }
 
     // ------------------------------------
@@ -140,7 +140,7 @@ void app_main(void)
     load_midi_commands();
     battery_monitor_init();
     g_battery_percent = battery_monitor_get_percentage();
-    ESP_LOGI(TAG, "Valor inicial da bateria: %d%%", g_battery_percent);
+    //ESP_LOGI(TAG, "Valor inicial da bateria: %d%%", g_battery_percent);
 
     init_navigation_buttons();
     init_oled();
@@ -154,8 +154,8 @@ void app_main(void)
     // ===================================================
     if (current_usb_mode) {
 
-        ESP_LOGW(TAG, "========= ENTERING USB DEVICE MODE =========");
-        ESP_LOGI(TAG, "Inicializando TinyUSB…");
+        //ESP_LOGW(TAG, "========= ENTERING USB DEVICE MODE =========");
+        //ESP_LOGI(TAG, "Inicializando TinyUSB…");
 
         // Configuração mínima obrigatória
         const tinyusb_config_t tusb_cfg = {
@@ -168,7 +168,7 @@ void app_main(void)
         esp_err_t err = tinyusb_driver_install(&tusb_cfg);
         ESP_ERROR_CHECK(err);
 
-        ESP_LOGI(TAG, "tinyusb_driver_install OK");
+        //ESP_LOGI(TAG, "tinyusb_driver_install OK");
 
         // Tasks da aplicação
         xTaskCreatePinnedToCore(button_check_task, "buttons", 4096, NULL, 3, NULL, 1);
@@ -186,7 +186,7 @@ void app_main(void)
             1
         );
 
-        ESP_LOGW(TAG, "USB Device Mode ativo. Aguarde o PC montar o dispositivo.");
+        //ESP_LOGW(TAG, "USB Device Mode ativo. Aguarde o PC montar o dispositivo.");
 
         while (1) vTaskDelay(pdMS_TO_TICKS(1000));
     }
@@ -194,7 +194,7 @@ void app_main(void)
     // ===================================================
     //                  USB HOST MODE
     // ===================================================
-    ESP_LOGW(TAG, "========= ENTERING USB HOST MODE =========");
+    //ESP_LOGW(TAG, "========= ENTERING USB HOST MODE =========");
 
     SemaphoreHandle_t sem = xSemaphoreCreateBinary();
 
@@ -205,7 +205,7 @@ void app_main(void)
     xTaskCreatePinnedToCore(navigation_button_task, "navigation", 4096, NULL, 3, NULL, 1);
     xTaskCreatePinnedToCore(power_management_task, "pwr_mgmt", 4096, NULL, 1, NULL, 1);
 
-    ESP_LOGI(TAG, "USB Host Mode ready.");
+    //ESP_LOGI(TAG, "USB Host Mode ready.");
 
     while (1) vTaskDelay(pdMS_TO_TICKS(1000));
 }

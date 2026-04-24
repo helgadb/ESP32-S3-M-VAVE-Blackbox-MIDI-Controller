@@ -9,7 +9,7 @@
 #include "power_management.h"
 #include "midi_tx_router.h"
 
-static const char *TAG = "MIDI_BTN";
+//static const char *TAG = "MIDI_BTN";
 
 void init_midi_buttons(void)
 {
@@ -27,14 +27,14 @@ void init_midi_buttons(void)
     };
     gpio_config(&io_conf);
 
-    ESP_LOGI(TAG, "MIDI buttons initialized");
+    //ESP_LOGI(TAG, "MIDI buttons initialized");
 }
 
 void button_check_task(void *arg)
 {
     init_midi_buttons();
 
-    ESP_LOGI(TAG, "Button controller ready");
+    //ESP_LOGI(TAG, "Button controller ready");
 
     bool last_button_states[BUTTON_COUNT];
     uint32_t last_send_times[BUTTON_COUNT];
@@ -57,7 +57,7 @@ void button_check_task(void *arg)
                     extern void battery_restore_normal_screen(void);
                     battery_restore_normal_screen();
                     update_cpu_activity_time();
-                    ESP_LOGI(TAG, "MIDI Button %d - only CPU power timer updated", i+1);
+                    //ESP_LOGI(TAG, "MIDI Button %d - only CPU power timer updated", i+1);
                     if (cpu_power_save_mode) {
                         set_cpu_full_performance_mode();
                     }
@@ -73,9 +73,9 @@ void button_check_task(void *arg)
                         }
                     }
 
-                    ESP_LOGI(TAG, "Button %d SENDING: %02X %02X %02X %02X", i + 1,
-                            current_commands[i].data[0], current_commands[i].data[1],
-                            current_commands[i].data[2], current_commands[i].data[3]);
+                    //ESP_LOGI(TAG, "Button %d SENDING: %02X %02X %02X %02X", i + 1,
+                    //        current_commands[i].data[0], current_commands[i].data[1],
+                    //        current_commands[i].data[2], current_commands[i].data[3]);
 
                     midi_tx_router_send(current_commands[i].data, sizeof(current_commands[i].data));
 

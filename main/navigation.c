@@ -8,7 +8,7 @@
 #include "freertos/task.h"
 #include "power_management.h"
 
-static const char *TAG = "NAV";
+//static const char *TAG = "NAV";
 
 void init_navigation_buttons(void)
 {
@@ -22,7 +22,7 @@ void init_navigation_buttons(void)
     };
     gpio_config(&io_conf);
 
-    ESP_LOGI(TAG, "Navigation buttons initialized");
+    //ESP_LOGI(TAG, "Navigation buttons initialized");
 }
 
 void increment_nibble(uint8_t *byte, int nibble) {
@@ -63,14 +63,14 @@ void handle_navigation(void)
 
         update_cpu_activity_time();
         update_display_activity_time();
-        ESP_LOGI(TAG, "Navigation button - both timers updated");
+        //ESP_LOGI(TAG, "Navigation button - both timers updated");
         // RESTAURA A TELA NORMAL SE ESTIVER MOSTRANDO AVISO DE BATERIA
         extern void battery_restore_normal_screen(void);
         battery_restore_normal_screen();
     }
 
     if (last_up_state && !current_up) {
-        ESP_LOGI(TAG, "[ACTION] UP button pressed");
+        //ESP_LOGI(TAG, "[ACTION] UP button pressed");
         switch (current_mode) {
             case MODE_NORMAL:
                 if (current_button > 0) {
@@ -90,7 +90,7 @@ void handle_navigation(void)
     }
 
     if (last_down_state && !current_down) {
-        ESP_LOGI(TAG, "[ACTION] DOWN button pressed");
+        //ESP_LOGI(TAG, "[ACTION] DOWN button pressed");
         switch (current_mode) {
             case MODE_NORMAL:
                 if (current_button < BUTTON_COUNT - 1) {
@@ -110,7 +110,7 @@ void handle_navigation(void)
     }
 
     if (last_star_state && !current_star) {
-        ESP_LOGI(TAG, "[ACTION] STAR button pressed");
+        //ESP_LOGI(TAG, "[ACTION] STAR button pressed");
         switch (current_mode) {
             case MODE_NORMAL:
                 current_mode = MODE_EDIT;
@@ -134,17 +134,18 @@ void handle_navigation(void)
     }
 
     if (last_hash_state && !current_hash) {
-        ESP_LOGI(TAG, "[ACTION] HASH button pressed");
+        //ESP_LOGI(TAG, "[ACTION] HASH button pressed");
         switch (current_mode) {
             case MODE_NORMAL:
                 if (current_button != 0) {
                     current_button = 0;
                     scroll_offset = 0;
                     update_display_partial();
-                    ESP_LOGI(TAG, "HASH: Returned to first button");
-                } else {
-                    ESP_LOGI(TAG, "HASH: Already at first button");
-                }
+                    //ESP_LOGI(TAG, "HASH: Returned to first button");
+                } 
+                //else {
+                //   ESP_LOGI(TAG, "HASH: Already at first button");
+                //}
                 break;
             case MODE_EDIT:
                 uint32_t press_start_time = xTaskGetTickCount();
@@ -180,7 +181,7 @@ void handle_navigation(void)
 
 void navigation_button_task(void *arg)
 {
-    ESP_LOGI(TAG, "Navigation task started - FIXED VERSION");
+    //ESP_LOGI(TAG, "Navigation task started - FIXED VERSION");
 
     TickType_t xLastWakeTime = xTaskGetTickCount();
 

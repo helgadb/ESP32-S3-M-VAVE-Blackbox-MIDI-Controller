@@ -4,13 +4,13 @@
 #include "esp_log.h"
 #include <string.h>
 
-static const char *TAG = "OLED";
+//static const char *TAG = "OLED";
 
 void init_oled(void)
 {
-    ESP_LOGI(TAG, "Initializing OLED with I2C NG Driver...");
-    ESP_LOGI(TAG, "SDA_GPIO=%d, SCL_GPIO=%d, RESET_GPIO=%d",
-             I2C_SDA_GPIO, I2C_SCL_GPIO, I2C_RESET_GPIO);
+    //ESP_LOGI(TAG, "Initializing OLED with I2C NG Driver...");
+    //ESP_LOGI(TAG, "SDA_GPIO=%d, SCL_GPIO=%d, RESET_GPIO=%d",
+    //        I2C_SDA_GPIO, I2C_SCL_GPIO, I2C_RESET_GPIO);
 
     i2c_master_init(&dev, I2C_SDA_GPIO, I2C_SCL_GPIO, I2C_RESET_GPIO);
     ssd1306_init(&dev, OLED_WIDTH, OLED_HEIGHT);
@@ -18,7 +18,7 @@ void init_oled(void)
     ssd1306_contrast(&dev, 0xff);
 
     display_initialized = true;
-    ESP_LOGI(TAG, "OLED initialized successfully");
+    //ESP_LOGI(TAG, "OLED initialized successfully");
 
     update_display_partial();
 }

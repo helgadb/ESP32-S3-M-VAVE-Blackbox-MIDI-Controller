@@ -19,7 +19,7 @@
 #include "midi_uart.h"
 #include "midi_class_driver_txrx.h" // for midi_send_data and midi_driver_ready_for_tx
 
-static const char *TAG = "MIDI_UART";
+//static const char *TAG = "MIDI_UART";
 
 // Default UART configuration - can be edited here if needed
 #define UART_NUM               UART_NUM_1
@@ -49,22 +49,22 @@ void midi_uart_init(void)
     ESP_ERROR_CHECK(uart_param_config(UART_NUM, &uart_config));
     ESP_ERROR_CHECK(uart_set_pin(UART_NUM, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
     
-    ESP_LOGI(TAG, "UART MIDI initialized (baud=%d, RX=GPIO%d, TX=GPIO%d)", UART_BAUD_RATE, UART_RX_PIN, UART_TX_PIN);
+    //ESP_LOGI(TAG, "UART MIDI initialized (baud=%d, RX=GPIO%d, TX=GPIO%d)", UART_BAUD_RATE, UART_RX_PIN, UART_TX_PIN);
 }
 
 // This function is intended to be called by the USB driver (via queue or fallback).
 void midi_uart_send_to_uart(const uint8_t *data, size_t length)
 {
     if (data == NULL || length == 0) {
-        ESP_LOGE(TAG, "midi_uart_send_to_uart: invalid args");
+        //ESP_LOGE(TAG, "midi_uart_send_to_uart: invalid args");
         return;
     }
 
     // Send directly to UART
     int written = uart_write_bytes(UART_NUM, (const char*)data, length);
-    if (written != (int)length) {
-        ESP_LOGW(TAG, "Direct UART write mismatch: expected %d wrote %d", (int)length, written);
-    }
+    //if (written != (int)length) {
+    //    ESP_LOGW(TAG, "Direct UART write mismatch: expected %d wrote %d", (int)length, written);
+    //}
     // ensure TX finishes quickly
     uart_wait_tx_done(UART_NUM, pdMS_TO_TICKS(20));
 }
@@ -175,9 +175,9 @@ static void midi_uart_usb_to_uart_task(void *arg)
             if (len > 0 && len <= (USB_UART_ITEM_SIZE - 2)) {
                 // Send directly to UART
                 int written = uart_write_bytes(UART_NUM, (const char*)(item + 2), len);
-                if (written != (int)len) {
-                    ESP_LOGW(TAG, "usb_to_uart task: wrote %d/%d bytes", written, (int)len);
-                }
+                //if (written != (int)len) {
+                //    ESP_LOGW(TAG, "usb_to_uart task: wrote %d/%d bytes", written, (int)len);
+                //}
                 // Wait briefly for TX to complete to maintain timing
                 uart_wait_tx_done(UART_NUM, pdMS_TO_TICKS(20));
             }
@@ -211,14 +211,14 @@ void midi_uart_start_usb_to_uart_task(UBaseType_t priority, uint32_t stack_size,
     if (usb_uart_queue == NULL) {
         usb_uart_queue = xQueueCreate(USB_UART_QUEUE_LEN, USB_UART_ITEM_SIZE);
         if (usb_uart_queue == NULL) {
-            ESP_LOGE(TAG, "Failed to create usb_uart_queue");
+            //ESP_LOGE(TAG, "Failed to create usb_uart_queue");
             return;
         }
     }
     BaseType_t ok = xTaskCreatePinnedToCore(midi_uart_usb_to_uart_task, "usb_to_uart_q", stack_size, NULL, priority, NULL, core);
-    if (ok != pdPASS) {
+    /*if (ok != pdPASS) {
         ESP_LOGE(TAG, "Failed to create usb_to_uart_q task");
     } else {
         ESP_LOGI(TAG, "usb_to_uart_q task started (priority=%d, core=%d)", (int)priority, (int)core);
-    }
+    }*/
 }

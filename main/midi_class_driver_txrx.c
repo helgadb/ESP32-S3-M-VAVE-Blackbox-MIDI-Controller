@@ -68,7 +68,7 @@ typedef struct {
     bool ready_for_tx;               // Flag indicando se está pronto para enviar
 } class_driver_t;
 
-static const char *DRIVER_TAG = "MIDI_DRIVER_TXRX";
+//static const char *DRIVER_TAG = "MIDI_DRIVER_TXRX";
 
 // Variável global para rastrear a instância do driver
 static class_driver_t *global_driver_instance = NULL;
@@ -92,14 +92,15 @@ static void midi_usb_host_rx_callback(usb_transfer_t *transfer) {
     int size = (int)transfer->actual_num_bytes;
     
     // Uma mensagem contém 4 bytes de dados
-    int num_messages = size / MIDI_MESSAGE_LENGTH;
-    int offset = 0;
+    //int num_messages = size / MIDI_MESSAGE_LENGTH;
+    //int offset = 0;
 
     // Processar mensagens recebidas
     if(size > 0) {
-        ESP_LOGI(DRIVER_TAG, "Received %d bytes (%d messages)", size, num_messages);
+        //ESP_LOGI(DRIVER_TAG, "Received %d bytes (%d messages)", size, num_messages);
         
         // Print cada mensagem separadamente (debug)
+        /*
         for(int i = 0; i < num_messages; i++) {
             ESP_LOGD(DRIVER_TAG, "MIDI[%d]: %02X %02X %02X %02X", i,
                     transfer->data_buffer[offset],
@@ -107,7 +108,7 @@ static void midi_usb_host_rx_callback(usb_transfer_t *transfer) {
                     transfer->data_buffer[offset + 2],
                     transfer->data_buffer[offset + 3]);
             offset += MIDI_MESSAGE_LENGTH;
-        }
+        }*/
 
         // Try to enqueue USB data to the UART queue (non-blocking) for low-latency forwarding.
         // If queue is full or not available, fallback to direct send to UART to avoid loss.
@@ -122,27 +123,28 @@ static void midi_usb_host_rx_callback(usb_transfer_t *transfer) {
         esp_err_t err = usb_host_transfer_submit(transfer);
         if (err != ESP_OK) {
             if (err == ESP_ERR_INVALID_STATE) {
-                ESP_LOGW(DRIVER_TAG, "USB device disconnected or in invalid state, cannot re-submit RX transfer");
+                //ESP_LOGW(DRIVER_TAG, "USB device disconnected or in invalid state, cannot re-submit RX transfer");
                 // Não tentar re-submeter
                 return;
-            } else {
-                ESP_LOGE(DRIVER_TAG, "Failed to re-submit RX transfer: %s", esp_err_to_name(err));
+            } 
+            //else {
+                //ESP_LOGE(DRIVER_TAG, "Failed to re-submit RX transfer: %s", esp_err_to_name(err));
                 // don't abort the whole system here
-            }
+            //}
         }
     }
 }
 
 // Callback para transmissão de dados MIDI
 static void midi_usb_host_tx_callback(usb_transfer_t *transfer) {
-    ESP_LOGI(DRIVER_TAG, "TX CALLBACK: Status = %d, Actual Bytes = %d", 
-             transfer->status, transfer->actual_num_bytes);
+    //ESP_LOGI(DRIVER_TAG, "TX CALLBACK: Status = %d, Actual Bytes = %d", 
+     //        transfer->status, transfer->actual_num_bytes);
     
-    if (transfer->status == USB_TRANSFER_STATUS_COMPLETED) {
-        ESP_LOGI(DRIVER_TAG, "MIDI data sent successfully!");
-    } else {
-        ESP_LOGE(DRIVER_TAG, "MIDI transfer failed with status: %d", transfer->status);
-    }
+    //if (transfer->status == USB_TRANSFER_STATUS_COMPLETED) {
+        //ESP_LOGI(DRIVER_TAG, "MIDI data sent successfully!");
+    //} else {
+        //ESP_LOGE(DRIVER_TAG, "MIDI transfer failed with status: %d", transfer->status);
+    //}
     
     // Liberar a transferência após o envio
     usb_host_transfer_free(transfer);
@@ -156,7 +158,7 @@ static void process_tx_queue(class_driver_t *driver_obj) {
 
     // Verificação adicional: dispositivo ainda válido?
     if (driver_obj->dev_hdl == NULL) {
-        ESP_LOGW(DRIVER_TAG, "Cannot process TX queue: device handle is NULL");
+        //ESP_LOGW(DRIVER_TAG, "Cannot process TX queue: device handle is NULL");
         return;
     }
 
@@ -164,14 +166,14 @@ static void process_tx_queue(class_driver_t *driver_obj) {
     
     // Verificar se há mensagens na fila para enviar
     while (xQueueReceive(driver_obj->tx_queue, &message, 0) == pdTRUE) {
-        ESP_LOGI(DRIVER_TAG, "Processing TX queue: %d bytes", message.length);
+        //ESP_LOGI(DRIVER_TAG, "Processing TX queue: %d bytes", message.length);
         
         // Alocar transferência para envio
         usb_transfer_t *transfer;
         esp_err_t err = usb_host_transfer_alloc(message.length, 0, &transfer);
         
         if (err != ESP_OK) {
-            ESP_LOGE(DRIVER_TAG, "Failed to allocate transfer for TX: %d", err);
+            //ESP_LOGE(DRIVER_TAG, "Failed to allocate transfer for TX: %d", err);
             continue;
         }
 
@@ -182,20 +184,21 @@ static void process_tx_queue(class_driver_t *driver_obj) {
         transfer->bEndpointAddress = driver_obj->interface_conf.endpoint_out_address;
         transfer->device_handle = driver_obj->dev_hdl;
 
-        ESP_LOGI(DRIVER_TAG, "Submitting USB transfer to endpoint 0x%02X", transfer->bEndpointAddress);
+        //ESP_LOGI(DRIVER_TAG, "Submitting USB transfer to endpoint 0x%02X", transfer->bEndpointAddress);
 
         // Enviar dados com verificação de erro
         err = usb_host_transfer_submit(transfer);
         if (err != ESP_OK) {
-            if (err == ESP_ERR_INVALID_STATE) {
-                ESP_LOGW(DRIVER_TAG, "Cannot submit TX transfer: device disconnected");
-            } else {
-                ESP_LOGE(DRIVER_TAG, "Failed to submit TX transfer: %d", err);
-            }
+            //if (err == ESP_ERR_INVALID_STATE) {
+                //ESP_LOGW(DRIVER_TAG, "Cannot submit TX transfer: device disconnected");
+            //} else {
+                //ESP_LOGE(DRIVER_TAG, "Failed to submit TX transfer: %d", err);
+            //}
             usb_host_transfer_free(transfer);
-        } else {
-            ESP_LOGI(DRIVER_TAG, "USB transfer submitted successfully");
         }
+        //else {
+            //ESP_LOGI(DRIVER_TAG, "USB transfer submitted successfully");
+        //}
     }
 }
 
@@ -204,7 +207,7 @@ static void get_midi_interface_settings(const usb_config_desc_t *usb_conf, inter
     assert(usb_conf != NULL);
     assert(interface_conf != NULL);
 
-    ESP_LOGI(DRIVER_TAG, "Getting MIDI interface configuration");
+    //ESP_LOGI(DRIVER_TAG, "Getting MIDI interface configuration");
 
     int offset = 0;
     uint16_t wTotalLength = usb_conf->wTotalLength;
@@ -220,14 +223,14 @@ static void get_midi_interface_settings(const usb_config_desc_t *usb_conf, inter
             // Verificar se é uma interface MIDI
             if(interface_desc->bInterfaceClass == USB_CLASS_AUDIO && 
                interface_desc->bInterfaceSubClass == USB_SUBCLASS_MIDISTREAM) {
-                ESP_LOGI(DRIVER_TAG, "Found MIDI Stream Interface");
+                //ESP_LOGI(DRIVER_TAG, "Found MIDI Stream Interface");
 
                 if(interface_desc->bNumEndpoints >= 2) {
                     interface_conf->interface_nmbr = interface_desc->bInterfaceNumber;
                     interface_conf->alternate_setting = interface_desc->bAlternateSetting;
 
-                    ESP_LOGI(DRIVER_TAG, "MIDI Interface: Number=%d, Alternate=%d", 
-                            interface_conf->interface_nmbr, interface_conf->alternate_setting);
+                    //ESP_LOGI(DRIVER_TAG, "MIDI Interface: Number=%d, Alternate=%d", 
+                    //        interface_conf->interface_nmbr, interface_conf->alternate_setting);
                 }
             }
         }
@@ -240,13 +243,13 @@ static void get_midi_interface_settings(const usb_config_desc_t *usb_conf, inter
             if(ep_dir) { // IN endpoint (recepção do host)
                 interface_conf->endpoint_in_address = ep_addr;
                 interface_conf->max_packet_size_in = ep_desc->wMaxPacketSize & 0x7FF;
-                ESP_LOGI(DRIVER_TAG, "IN Endpoint: Address=0x%02X, MaxPacketSize=%d", 
-                        interface_conf->endpoint_in_address, interface_conf->max_packet_size_in);
+                //ESP_LOGI(DRIVER_TAG, "IN Endpoint: Address=0x%02X, MaxPacketSize=%d", 
+                //        interface_conf->endpoint_in_address, interface_conf->max_packet_size_in);
             } else { // OUT endpoint (transmissão do host)
                 interface_conf->endpoint_out_address = ep_addr;
                 interface_conf->max_packet_size_out = ep_desc->wMaxPacketSize & 0x7FF;
-                ESP_LOGI(DRIVER_TAG, "OUT Endpoint: Address=0x%02X, MaxPacketSize=%d", 
-                        interface_conf->endpoint_out_address, interface_conf->max_packet_size_out);
+                //ESP_LOGI(DRIVER_TAG, "OUT Endpoint: Address=0x%02X, MaxPacketSize=%d", 
+                //        interface_conf->endpoint_out_address, interface_conf->max_packet_size_out);
             }
         }
 
@@ -254,10 +257,10 @@ static void get_midi_interface_settings(const usb_config_desc_t *usb_conf, inter
 
     } while (next_desc != NULL);
 
-    ESP_LOGI(DRIVER_TAG, "MIDI Interface Analysis Complete:");
-    ESP_LOGI(DRIVER_TAG, "  - IN Endpoint: 0x%02X", interface_conf->endpoint_in_address);
-    ESP_LOGI(DRIVER_TAG, "  - OUT Endpoint: 0x%02X", interface_conf->endpoint_out_address);
-    ESP_LOGI(DRIVER_TAG, "  - Interface: %d", interface_conf->interface_nmbr);
+    //ESP_LOGI(DRIVER_TAG, "MIDI Interface Analysis Complete:");
+    //ESP_LOGI(DRIVER_TAG, "  - IN Endpoint: 0x%02X", interface_conf->endpoint_in_address);
+    //ESP_LOGI(DRIVER_TAG, "  - OUT Endpoint: 0x%02X", interface_conf->endpoint_out_address);
+    //ESP_LOGI(DRIVER_TAG, "  - Interface: %d", interface_conf->interface_nmbr);
 }
 
 // Callback de eventos do cliente USB
@@ -268,13 +271,13 @@ static void client_event_cb(const usb_host_client_event_msg_t *event_msg, void *
         if (driver_obj->dev_addr == 0) {
             driver_obj->dev_addr = event_msg->new_dev.address;
             driver_obj->actions |= ACTION_OPEN_DEV;
-            ESP_LOGI(DRIVER_TAG, "New device detected at address %d", driver_obj->dev_addr);
+            //ESP_LOGI(DRIVER_TAG, "New device detected at address %d", driver_obj->dev_addr);
         }
         break;
     case USB_HOST_CLIENT_EVENT_DEV_GONE:
         if (driver_obj->dev_hdl != NULL) {
             driver_obj->actions = ACTION_CLOSE_DEV;
-            ESP_LOGI(DRIVER_TAG, "Device disconnected");
+            //ESP_LOGI(DRIVER_TAG, "Device disconnected");
         }
         break;
     default:
@@ -285,7 +288,7 @@ static void client_event_cb(const usb_host_client_event_msg_t *event_msg, void *
 // Ação: Abrir dispositivo
 static void action_open_dev(class_driver_t *driver_obj) {
     assert(driver_obj->dev_addr != 0);
-    ESP_LOGI(DRIVER_TAG, "Opening device at address %d", driver_obj->dev_addr);
+    //ESP_LOGI(DRIVER_TAG, "Opening device at address %d", driver_obj->dev_addr);
     ESP_ERROR_CHECK(usb_host_device_open(driver_obj->client_hdl, driver_obj->dev_addr, &driver_obj->dev_hdl));
     driver_obj->actions &= ~ACTION_OPEN_DEV;
     driver_obj->actions |= ACTION_GET_DEV_INFO;
@@ -294,11 +297,11 @@ static void action_open_dev(class_driver_t *driver_obj) {
 // Ação: Obter informações do dispositivo
 static void action_get_info(class_driver_t *driver_obj) {
     assert(driver_obj->dev_hdl != NULL);
-    ESP_LOGI(DRIVER_TAG, "Getting device information");
+    //ESP_LOGI(DRIVER_TAG, "Getting device information");
     usb_device_info_t dev_info;
     ESP_ERROR_CHECK(usb_host_device_info(driver_obj->dev_hdl, &dev_info));
-    ESP_LOGI(DRIVER_TAG, "\t%s speed", (dev_info.speed == USB_SPEED_LOW) ? "Low" : "Full");
-    ESP_LOGI(DRIVER_TAG, "\tbConfigurationValue %d", dev_info.bConfigurationValue);
+    //ESP_LOGI(DRIVER_TAG, "\t%s speed", (dev_info.speed == USB_SPEED_LOW) ? "Low" : "Full");
+    //ESP_LOGI(DRIVER_TAG, "\tbConfigurationValue %d", dev_info.bConfigurationValue);
     driver_obj->actions &= ~ACTION_GET_DEV_INFO;
     driver_obj->actions |= ACTION_GET_DEV_DESC;
 }
@@ -306,7 +309,7 @@ static void action_get_info(class_driver_t *driver_obj) {
 // Ação: Obter descritor do dispositivo
 static void action_get_dev_desc(class_driver_t *driver_obj) {
     assert(driver_obj->dev_hdl != NULL);
-    ESP_LOGI(DRIVER_TAG, "Getting device descriptor");
+    //ESP_LOGI(DRIVER_TAG, "Getting device descriptor");
     const usb_device_desc_t *dev_desc;
     ESP_ERROR_CHECK(usb_host_get_device_descriptor(driver_obj->dev_hdl, &dev_desc));
     usb_print_device_descriptor(dev_desc);
@@ -317,7 +320,7 @@ static void action_get_dev_desc(class_driver_t *driver_obj) {
 // Ação: Obter descritor de configuração
 static void action_get_config_desc(class_driver_t *driver_obj) {
     assert(driver_obj->dev_hdl != NULL);
-    ESP_LOGI(DRIVER_TAG, "Getting config descriptor");
+    //ESP_LOGI(DRIVER_TAG, "Getting config descriptor");
     const usb_config_desc_t *config_desc;
     ESP_ERROR_CHECK(usb_host_get_active_config_descriptor(driver_obj->dev_hdl, &config_desc));
     usb_print_config_descriptor(config_desc, NULL);
@@ -336,15 +339,15 @@ static void action_get_str_desc(class_driver_t *driver_obj) {
     usb_device_info_t dev_info;
     ESP_ERROR_CHECK(usb_host_device_info(driver_obj->dev_hdl, &dev_info));
     if (dev_info.str_desc_manufacturer) {
-        ESP_LOGI(DRIVER_TAG, "Getting Manufacturer string descriptor");
+        //ESP_LOGI(DRIVER_TAG, "Getting Manufacturer string descriptor");
         usb_print_string_descriptor(dev_info.str_desc_manufacturer);
     }
     if (dev_info.str_desc_product) {
-        ESP_LOGI(DRIVER_TAG, "Getting Product string descriptor");
+        //ESP_LOGI(DRIVER_TAG, "Getting Product string descriptor");
         usb_print_string_descriptor(dev_info.str_desc_product);
     }
     if (dev_info.str_desc_serial_num) {
-        ESP_LOGI(DRIVER_TAG, "Getting Serial Number string descriptor");
+        //ESP_LOGI(DRIVER_TAG, "Getting Serial Number string descriptor");
         usb_print_string_descriptor(dev_info.str_desc_serial_num);
     }
     driver_obj->actions &= ~ACTION_GET_STR_DESC;
@@ -354,7 +357,7 @@ static void action_get_str_desc(class_driver_t *driver_obj) {
 // Ação: Claim da interface
 static void action_claim_interface(class_driver_t *driver_obj) {
     assert(driver_obj->dev_hdl != NULL);
-    ESP_LOGI(DRIVER_TAG, "Claiming MIDI Interface %d", driver_obj->interface_conf.interface_nmbr);
+    //ESP_LOGI(DRIVER_TAG, "Claiming MIDI Interface %d", driver_obj->interface_conf.interface_nmbr);
 
     ESP_ERROR_CHECK(usb_host_interface_claim(
             driver_obj->client_hdl,
@@ -369,7 +372,7 @@ static void action_claim_interface(class_driver_t *driver_obj) {
 // Ação: Iniciar leitura de dados
 static void action_start_reading_data(class_driver_t *driver_obj) {
     assert(driver_obj->dev_hdl != NULL);
-    ESP_LOGI(DRIVER_TAG, "Starting MIDI data reception");
+    //ESP_LOGI(DRIVER_TAG, "Starting MIDI data reception");
 
     // Configurar transferência de recepção
     ESP_ERROR_CHECK(usb_host_transfer_alloc(1024, 0, &driver_obj->rx_transfer));
@@ -382,7 +385,7 @@ static void action_start_reading_data(class_driver_t *driver_obj) {
 
     // Iniciar recepção contínua
     ESP_ERROR_CHECK(usb_host_transfer_submit(driver_obj->rx_transfer));
-    ESP_LOGI(DRIVER_TAG, "MIDI reception started");
+    //ESP_LOGI(DRIVER_TAG, "MIDI reception started");
 
     driver_obj->actions &= ~ACTION_START_READING_DATA;
     driver_obj->actions |= ACTION_PREPARE_SEND_DATA;
@@ -390,11 +393,11 @@ static void action_start_reading_data(class_driver_t *driver_obj) {
 
 // Ação: Preparar envio de dados
 static void action_prepare_send_data(class_driver_t *driver_obj) {
-    ESP_LOGI(DRIVER_TAG, "Preparing MIDI transmission");
+    //ESP_LOGI(DRIVER_TAG, "Preparing MIDI transmission");
 
     // Verificar se temos um endpoint OUT para transmissão
     if (driver_obj->interface_conf.endpoint_out_address == 0) {
-        ESP_LOGW(DRIVER_TAG, "No OUT endpoint found - device is read-only");
+        //ESP_LOGW(DRIVER_TAG, "No OUT endpoint found - device is read-only");
         driver_obj->ready_for_tx = false;
         driver_obj->actions &= ~ACTION_PREPARE_SEND_DATA;
         return;
@@ -403,11 +406,11 @@ static void action_prepare_send_data(class_driver_t *driver_obj) {
     // Criar fila para mensagens de transmissão
     driver_obj->tx_queue = xQueueCreate(MIDI_TX_QUEUE_SIZE, sizeof(internal_midi_message_t));
     if (driver_obj->tx_queue == NULL) {
-        ESP_LOGE(DRIVER_TAG, "Failed to create TX queue");
+        //ESP_LOGE(DRIVER_TAG, "Failed to create TX queue");
         driver_obj->ready_for_tx = false;
     } else {
         driver_obj->ready_for_tx = true;
-        ESP_LOGI(DRIVER_TAG, "MIDI transmission ready - Device can send and receive");
+        //ESP_LOGI(DRIVER_TAG, "MIDI transmission ready - Device can send and receive");
     }
 
     // Atualizar instância global
@@ -418,7 +421,7 @@ static void action_prepare_send_data(class_driver_t *driver_obj) {
 
 // Ação: Fechar dispositivo
 static void action_close_dev(class_driver_t *driver_obj) {
-    ESP_LOGI(DRIVER_TAG, "Closing MIDI device");
+    //ESP_LOGI(DRIVER_TAG, "Closing MIDI device");
 
     driver_obj->ready_for_tx = false;
 
@@ -468,12 +471,12 @@ void class_driver_task(void *arg)
 
     // Registrar a instância globalmente desde o início
     global_driver_instance = &driver_obj;
-    ESP_LOGI(DRIVER_TAG, "Driver task started, instance registered");
+    //ESP_LOGI(DRIVER_TAG, "Driver task started, instance registered");
 
     //Wait until daemon task has installed USB Host Library
     xSemaphoreTake(signaling_sem, portMAX_DELAY);
 
-    ESP_LOGI(DRIVER_TAG, "Registering Client");
+    //ESP_LOGI(DRIVER_TAG, "Registering Client");
     usb_host_client_config_t client_config = {
         .is_synchronous = false,
         .max_num_event_msg = USB_CLIENT_NUM_EVENT_MSG,
@@ -556,10 +559,11 @@ bool midi_driver_ready_for_tx(void) {
 // Função para obter o estado detalhado do driver
 void midi_driver_print_status(void) {
     if (global_driver_instance == NULL) {
-        ESP_LOGI(DRIVER_TAG, "Driver status: NO INSTANCE");
+        //ESP_LOGI(DRIVER_TAG, "Driver status: NO INSTANCE");
         return;
     }
 
+    /*  
     ESP_LOGI(DRIVER_TAG, "=== MIDI Driver Status ===");
     ESP_LOGI(DRIVER_TAG, "  - Instance: %p", global_driver_instance);
     ESP_LOGI(DRIVER_TAG, "  - Device handle: %p", global_driver_instance->dev_hdl);
@@ -569,35 +573,36 @@ void midi_driver_print_status(void) {
     ESP_LOGI(DRIVER_TAG, "  - OUT Endpoint: 0x%02X", 
              global_driver_instance->interface_conf.endpoint_out_address);
     ESP_LOGI(DRIVER_TAG, "===========================");
+    */
 }
 
 // Função para enviar dados MIDI brutos
 bool midi_send_data(const uint8_t *data, size_t length) {
-    ESP_LOGI(DRIVER_TAG, "midi_send_data called: length=%d", length);
+    //ESP_LOGI(DRIVER_TAG, "midi_send_data called: length=%d", length);
 
     if (global_driver_instance == NULL) {
-        ESP_LOGE(DRIVER_TAG, "midi_send_data: No driver instance");
+        //ESP_LOGE(DRIVER_TAG, "midi_send_data: No driver instance");
         return false;
     }
 
     if (!global_driver_instance->ready_for_tx) {
-        ESP_LOGE(DRIVER_TAG, "midi_send_data: Driver not ready for TX");
+        //ESP_LOGE(DRIVER_TAG, "midi_send_data: Driver not ready for TX");
         return false;
     }
 
     // Verificação adicional: dispositivo ainda conectado?
     if (global_driver_instance->dev_hdl == NULL) {
-        ESP_LOGW(DRIVER_TAG, "midi_send_data: Device not connected");
+        //ESP_LOGW(DRIVER_TAG, "midi_send_data: Device not connected");
         return false;
     }
 
     if (data == NULL || length == 0) {
-        ESP_LOGE(DRIVER_TAG, "midi_send_data: Invalid data");
+        //ESP_LOGE(DRIVER_TAG, "midi_send_data: Invalid data");
         return false;
     }
 
-    ESP_LOGI(DRIVER_TAG, "Data: %02X %02X %02X %02X", 
-             data[0], data[1], data[2], data[3]);
+    //ESP_LOGI(DRIVER_TAG, "Data: %02X %02X %02X %02X", 
+    //         data[0], data[1], data[2], data[3]);
 
     internal_midi_message_t message;
     memset(&message, 0, sizeof(message));
@@ -610,11 +615,11 @@ bool midi_send_data(const uint8_t *data, size_t length) {
     BaseType_t queue_result = xQueueSend(global_driver_instance->tx_queue, &message, pdMS_TO_TICKS(100));
 
     if (queue_result != pdTRUE) {
-        ESP_LOGE(DRIVER_TAG, "TX queue full or error");
+        //ESP_LOGE(DRIVER_TAG, "TX queue full or error");
         return false;
     }
 
-    ESP_LOGI(DRIVER_TAG, "MIDI message queued for transmission");
+    //ESP_LOGI(DRIVER_TAG, "MIDI message queued for transmission");
 
     // Processamento imediato
     process_tx_queue(global_driver_instance);

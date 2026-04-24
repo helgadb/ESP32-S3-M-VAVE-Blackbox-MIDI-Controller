@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+uint8_t g_battery_percent = 0;  // valor inicial
 const int button_gpios[BUTTON_COUNT] = {
     6,7,14,15,16,17,18,21,47,48
 };

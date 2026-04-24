@@ -2,6 +2,7 @@ idf_component_register(
     SRCS 
         "globals.c"
         "main.c"
+        "battery_monitor.c"
         "midi_buttons.c"
         "midi_class_driver_txrx.c"
         "midi_device_tx.c"
@@ -22,6 +23,7 @@ idf_component_register(
         ssd1306
         nvs_flash
         esp_pm
+        esp_adc
 
     PRIV_REQUIRES 
         usb

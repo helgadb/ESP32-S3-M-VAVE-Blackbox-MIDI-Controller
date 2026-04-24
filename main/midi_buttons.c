@@ -54,6 +54,8 @@ void button_check_task(void *arg)
 
             if (last_button_states[i] && !current_state) {
                 if ((current_time - last_send_times[i]) >= DEBOUNCE_DELAY) {
+                    extern void battery_restore_normal_screen(void);
+                    battery_restore_normal_screen();
                     update_cpu_activity_time();
                     ESP_LOGI(TAG, "MIDI Button %d - only CPU power timer updated", i+1);
                     if (cpu_power_save_mode) {

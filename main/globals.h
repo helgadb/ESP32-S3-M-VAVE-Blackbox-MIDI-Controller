@@ -5,6 +5,7 @@
 
 #define BUTTON_COUNT 10
 #define VISIBLE_BUTTONS 5
+#define LOW_BATTERY_THRESHOLD 20
 
 extern const int button_gpios[BUTTON_COUNT];
 
@@ -47,6 +48,7 @@ extern uint32_t last_cpu_activity_time;
 extern uint32_t last_display_activity_time;
 extern bool display_on;
 extern bool cpu_power_save_mode;
+extern uint8_t g_battery_percent;
 
 void update_display_partial(void);
 void save_midi_commands(void);

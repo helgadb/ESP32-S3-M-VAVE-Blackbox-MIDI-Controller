@@ -64,6 +64,9 @@ void handle_navigation(void)
         update_cpu_activity_time();
         update_display_activity_time();
         ESP_LOGI(TAG, "Navigation button - both timers updated");
+        // RESTAURA A TELA NORMAL SE ESTIVER MOSTRANDO AVISO DE BATERIA
+        extern void battery_restore_normal_screen(void);
+        battery_restore_normal_screen();
     }
 
     if (last_up_state && !current_up) {

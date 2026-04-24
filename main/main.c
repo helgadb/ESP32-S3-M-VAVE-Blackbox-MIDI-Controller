@@ -13,6 +13,7 @@
 #include "midi_class_driver_txrx.h"
 #include "midi_device_tx.h"
 #include "midi_tx_router.h"
+#include "battery_monitor.h"
 
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -25,6 +26,17 @@
 #include "esp_timer.h"
 
 static const char *TAG = "MAIN";
+
+// =======================================================
+//   TASK DA BATERIA 
+// =======================================================
+static void battery_monitoring_task(void *arg)
+{    
+    while (1) {
+        battery_monitor_update();  // lê e atualiza o display
+        vTaskDelay(pdMS_TO_TICKS(600000));  // espera 10 min.        
+    }
+}
 
 void usb_debug_task(void *arg)
 {
@@ -76,8 +88,13 @@ static const uint8_t s_midi_cfg_desc[] = {
 // =======================================================
 
 void app_main(void)
-{
+{ 
+    ESP_LOGI(TAG, "=== INICIANDO BLACKBOX MIDI CONTROLLER ===");
+    ESP_LOGI(TAG, "Firmware versao: 1.0");
+    ESP_LOGI(TAG, "Compilado em: %s %s", __DATE__, __TIME__);
+    
     ESP_LOGI(TAG, "Booting controller…");
+
     init_nvs();
 
     // --- Configura GPIOs ---
@@ -121,9 +138,15 @@ void app_main(void)
     init_power_management();
     
     load_midi_commands();
-    init_oled();
-    init_navigation_buttons();
+    battery_monitor_init();
+    g_battery_percent = battery_monitor_get_percentage();
+    ESP_LOGI(TAG, "Valor inicial da bateria: %d%%", g_battery_percent);
 
+    init_navigation_buttons();
+    init_oled();
+    battery_show_warning_once();
+    
+    xTaskCreatePinnedToCore(battery_monitoring_task, "battery_monitor", 4096, NULL, 1, NULL, 1);
     display_on = true;
 
     // ===================================================

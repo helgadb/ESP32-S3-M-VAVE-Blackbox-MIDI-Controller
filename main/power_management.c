@@ -48,15 +48,32 @@ void display_power_save(bool enable)
     if (!display_initialized) return;
 
     if (enable) {
+        // Display ligando
         ssd1306_clear_screen(&dev, false);
-        update_display_partial();
         display_on = true;
-        ESP_LOGI(TAG, " Display ON - Standby exited");
+        ESP_LOGI(TAG, "Display ON - Standby exited");
+        
+        // Reativa o display com a tela normal
+        update_display_partial();
     } else {
+        // Display entrando em standby
         ssd1306_clear_screen(&dev, false);
-        ssd1306_display_text(&dev, 3, "   STANDBY...   ", 16, false);
+        
+        // Verifica se bateria está baixa para mostrar mensagem diferente
+        if (g_battery_percent <= LOW_BATTERY_THRESHOLD) {
+            ESP_LOGI(TAG, "Display STANDBY - Battery Low mode");
+            ssd1306_display_text(&dev, 4, "  LOW BATTERY!    ", 18, false);
+            //ssd1306_display_text(&dev, 4, "   Charge soon!   ", 18, false);
+            
+            //char msg[24];
+            //snprintf(msg, sizeof(msg), "   %d%% remaining   ", g_battery_percent);
+            //ssd1306_display_text(&dev, 5, msg, 18, false);
+        } else {
+            ESP_LOGI(TAG, "Display STANDBY - Normal mode");
+            ssd1306_display_text(&dev, 3, "   STANDBY...   ", 16, false);
+        }
+        
         display_on = false;
-        ESP_LOGI(TAG, " Display OFF - Standby mode");
     }
 }
 
@@ -85,10 +102,7 @@ void power_management_task(void *arg)
         uint32_t cpu_inactive_ms = (current_time - last_cpu_activity_time) * portTICK_PERIOD_MS;
         uint32_t display_inactive_ms = (current_time - last_display_activity_time) * portTICK_PERIOD_MS;
 
-        ESP_LOGI(TAG, "[CONTROL] CPU: %d ms, Display: %d ms, CPU-Save: %s, Display-On: %s",
-                 cpu_inactive_ms, display_inactive_ms,
-                 cpu_power_save_mode ? "YES" : "NO",
-                 display_on ? "YES" : "NO");
+        ESP_LOGI(TAG, "[CONTROL] CPU: %d ms, Display: %d ms", cpu_inactive_ms, display_inactive_ms);
 
         if (!cpu_power_save_mode && cpu_inactive_ms > 10000) {
             ESP_LOGI(TAG, "💡 CPU POWER SAVE MODE ACTIVATED");
@@ -101,17 +115,17 @@ void power_management_task(void *arg)
                 current_mode = MODE_NORMAL;
                 edit_initialized = false;
             }
-            ESP_LOGI(TAG, "🖥️ DISPLAY STANDBY (no navigation)");
+            ESP_LOGI(TAG, "🖥️ DISPLAY STANDBY");
             display_power_save(false);
         }
 
         if (display_inactive_ms < 1000 && !display_on) {
-            ESP_LOGI(TAG, "🖥️ DISPLAY REACTIVATED (navigation detected)");
+            ESP_LOGI(TAG, "🖥️ DISPLAY REACTIVATED");
             display_power_save(true);
         }
 
         if (cpu_inactive_ms < 1000 && cpu_power_save_mode) {
-            ESP_LOGI(TAG, "💡 CPU POWER SAVE EXITED (activity detected)");
+            ESP_LOGI(TAG, "💡 CPU POWER SAVE EXITED");
             set_cpu_full_performance_mode();
         }
     }

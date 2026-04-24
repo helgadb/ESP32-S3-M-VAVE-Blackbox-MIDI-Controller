@@ -23,11 +23,23 @@ void init_oled(void)
     update_display_partial();
 }
 
+// Função auxiliar para desenhar o ícone/porcentagem da bateria
+static void draw_battery_status(void) {
+    char battery_str[16];
+    // Mostra a bateria no canto superior direito (posição 16, pois linha tem 21 caracteres)
+    // Ajuste a posição conforme necessário - 16 alinha à direita
+    snprintf(battery_str, sizeof(battery_str), "Battery:%3d%%", g_battery_percent);
+    ssd1306_display_text(&dev, 0, battery_str, strlen(battery_str), false);
+}
+
 void update_display_partial(void)
 {
     switch (current_mode) {
         case MODE_NORMAL:
-            ssd1306_display_text(&dev, 0, "BUTTON CONFIG   ", 16, false);
+            // Linha 0: Título e bateria lado a lado
+            //ssd1306_display_text(&dev, 0, "BUTTON CONFIG", 12, false);
+            draw_battery_status();  // Mostra bateria no canto direito
+            
             ssd1306_display_text(&dev, 1, "----------------", 16, false);
 
             for (int i = 0; i < VISIBLE_BUTTONS; i++) {
@@ -76,6 +88,8 @@ void update_display_partial(void)
                     title[8] = '0' + btn_num;
                 }
                 ssd1306_display_text(&dev, 0, title, strlen(title), false);
+                draw_battery_status();  // Mostra bateria também no modo edição
+                
                 ssd1306_display_text(&dev, 1, "----------------", 16, false);
 
                 ssd1306_display_text(&dev, 5, "Up/Dn:Change    ", 16, false);
@@ -117,6 +131,9 @@ void update_display_partial(void)
 
             ssd1306_display_text(&dev, 3, display_line, strlen(display_line), false);
             ssd1306_display_text(&dev, 4, "                ", 16, false);
+            
+            // Redesenha a bateria no modo edição (caso tenha sido sobrescrita)
+            draw_battery_status();
             break;
     }
 }

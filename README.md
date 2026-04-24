@@ -1,32 +1,16 @@
-# _Sample project_
+Circuito de Monitoramento de Bateria:
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+GPIO2 = HIGH → Transistor NPN liga → MOSFET liga → Tensão flui para o divisor
+                    ↓
+            ADC lê a tensão no GPIO1
+                    ↓
+            Calcula a porcentagem da bateria (0% a 100%)
+                    ↓
+GPIO2 = LOW → NPN desliga → MOSFET desliga → Consumo zero
 
-This is the simplest buildable example. The example is used by command `idf.py create-project`
-that copies the project to user specified path and set it's name. For more information follow the [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project)
-
-
-
-## How to use example
-We encourage the users to use the example as a template for the new projects.
-A recommended way is to follow the instructions on a [docs page](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html#start-a-new-project).
-
-## Example folder contents
-
-The project **sample_project** contains one source file in C language [main.c](main/main.c). The file is located in folder [main](main).
-
-ESP-IDF projects are built using CMake. The project build configuration is contained in `CMakeLists.txt`
-files that provide set of directives and instructions describing the project's source files and targets
-(executable, library, or both). 
-
-Below is short explanation of remaining files in the project folder.
-
-```
-├── CMakeLists.txt
-├── main
-│   ├── CMakeLists.txt
-│   └── main.c
-└── README.md                  This is the file you are currently reading
-```
-Additionally, the sample project contains Makefile and component.mk files, used for the legacy Make based build system. 
-They are not used or needed when building with CMake and idf.py.
+Componente:                                   Função:
+IRF9610 (MOSFET P-Channel)	                  Atua como chave eletrônica, conectando/desconectando a bateria do divisor de tensão
+SD965 (Transistor NPN)	                      Driver de acionamento do MOSFET. Converte o sinal de 3.3V do ESP32 para controlar a tensão da bateria (4.2V). 
+2x Resistores de 100kΩ (Divisor de tensão)	  Reduz a tensão da bateria pela metade (máx. 4.2V → 2.1V), adequando-a ao limite do ADC do ESP32
+GPIO2 (ESP32-S3)	Pino de ativação            Emite sinal HIGH por 50ms durante a medição
+GPIO1 / ADC1_CH0 (ESP32-S3)	Pino de leitura   Lê a tensão dividida para calcular a porcentagem da bateria

@@ -199,6 +199,88 @@ void ssd1306_display_text_box2(SSD1306_t * dev, int page, int seg, const char * 
 	}
 }
 
+// by deeoseek
+// Ampliação 6x baseada na versão x3
+void ssd1306_display_text_x6(SSD1306_t * dev, int page, const char * text, int text_len, bool invert)
+{
+    if (page >= dev->_pages) return;
+
+    int _text_len = text_len;
+
+    // Cada caractere ocupará 48 colunas.
+    // Em um display de 128 pixels de largura cabem apenas 2 caracteres.
+    if (_text_len > 2) _text_len = 2;
+
+    int seg = 0;
+
+    for (int nn = 0; nn < _text_len; nn++) {
+
+        uint8_t const * const in_columns = font8x8_basic_tr[(uint8_t)text[nn]];
+
+        // Cada coluna original vira 48 bits (8*6)
+        uint64_t out_columns[8];
+        memset(out_columns, 0, sizeof(out_columns));
+
+        for (int xx = 0; xx < 8; xx++) {
+
+            uint64_t in_bitmask  = 0x1;
+            uint64_t out_bitmask = 0x3F;   // 0b111111
+
+            for (int yy = 0; yy < 8; yy++) {
+
+                if (in_columns[xx] & in_bitmask) {
+                    out_columns[xx] |= out_bitmask;
+                }
+
+                in_bitmask <<= 1;
+                out_bitmask <<= 6;
+            }
+        }
+
+        // 48 pixels de altura = 6 páginas SSD1306
+        for (int yy = 0; yy < 6; yy++) {
+
+            uint8_t image[48];
+            memset(image, 0, 48);  // <--- IMPORTANTE: limpar a imagem
+
+            for (int xx = 0; xx < 8; xx++) {
+
+                uint8_t page_data = (out_columns[xx] >> (yy * 8)) & 0xFF;
+
+                // Cada coluna original vira 6 bytes horizontais
+                image[xx*6 + 0] = page_data;
+                image[xx*6 + 1] = page_data;
+                image[xx*6 + 2] = page_data;
+                image[xx*6 + 3] = page_data;
+                image[xx*6 + 4] = page_data;
+                image[xx*6 + 5] = page_data;
+            }
+
+            if (invert) ssd1306_invert(image, 48);
+            if (dev->_flip) ssd1306_flip(image, 48);
+
+            if (dev->_address == SPI_ADDRESS) {
+                spi_display_image(dev, page + yy, seg, image, 48);
+            } else {
+                i2c_display_image(dev, page + yy, seg, image, 48);
+            }
+
+            memcpy(&dev->_page[page + yy]._segs[seg], image, 48);
+        }
+
+        seg += 48;
+    }
+    
+    // LIMPAR O RESTO DO BUFFER (evita vazamento)
+    for (int yy = 0; yy < 6; yy++) {
+        if (page + yy >= dev->_pages) break;
+        // Limpar do final do último caractere até o fim da linha
+        if (seg < 128) {
+            memset(&dev->_page[page + yy]._segs[seg], 0, 128 - seg);
+        }
+    }
+}
+
 // by Coert Vonk
 void 
 ssd1306_display_text_x3(SSD1306_t * dev, int page, const char * text, int text_len, bool invert)

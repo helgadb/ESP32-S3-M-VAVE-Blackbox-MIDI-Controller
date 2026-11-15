@@ -75,10 +75,20 @@ void update_screen_by_state(void)
             ssd1306_display_text(&dev, 1, line, 16, false);
             
             memset(line, ' ', 16);
-            char page_buf[3];
-            snprintf(page_buf, sizeof(page_buf), "%d", current_page);
+            char page_buf[16];
+            if (current_page < 8) {
+                snprintf(page_buf, sizeof(page_buf), "%d", current_page);
+            } else {
+                int preset_num = (current_page - 8) + 1;
+                if (preset_num < 10) {
+                    snprintf(page_buf, sizeof(page_buf), "0%d", preset_num);
+                } else {
+                    snprintf(page_buf, sizeof(page_buf), "%d", preset_num);
+                }
+            }
             int start_col = (16 - strlen(page_buf)) / 2;
             strcpy(&line[start_col], page_buf);
+            line[16] = '\0';
             
             for (int row = 3; row <= 4; row++) {
                 ssd1306_display_text(&dev, row, line, 16, false);
@@ -113,14 +123,25 @@ void change_page(int delta) {
     }
 }
 
-void set_page(int new_page) {
-    if (new_page >= 0 && new_page < TOTAL_PAGES && new_page != current_page) {
+void set_page_and_button(int new_page, int new_button) {
+    if (new_page >= 0 && new_page < TOTAL_PAGES) {
         current_page = new_page;
-        current_button = 0;
-        scroll_offset = 0;
+        current_button = new_button;
+        if (current_button < 0) current_button = 0;
+        if (current_button >= BUTTONS_PER_PAGE) current_button = BUTTONS_PER_PAGE - 1;
+        
+        // Ajusta o scroll_offset para garantir que o botão selecionado fique visível na tela
+        if (current_button < scroll_offset) {
+            scroll_offset = current_button;
+        } else if (current_button >= scroll_offset + VISIBLE_BUTTONS) {
+            scroll_offset = current_button - VISIBLE_BUTTONS + 1;
+        }
         
         last_cpu_activity_time = xTaskGetTickCount();
-        
         update_screen_by_state();
     }
+}
+
+void set_page(int new_page) {
+    set_page_and_button(new_page, 0);
 }

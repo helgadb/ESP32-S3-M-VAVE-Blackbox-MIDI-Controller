@@ -66,13 +66,13 @@ void button_check_task(void *arg)
                 uint32_t actual_duration = (press_duration > DEBOUNCE_DELAY_MS) ? 
                                            (press_duration - DEBOUNCE_DELAY_MS) : 0;
                 
-                // Pressionamento curto (menos que LONG_PRESS_MS e não foi long press)
+// Pressionamento curto (menos que LONG_PRESS_MS e não foi long press)
                 if (actual_duration < LONG_PRESS_MS && !long_press_triggered[i]) {
                     extern void battery_restore_normal_screen(void);
                     battery_restore_normal_screen();
                     
-                    // Se o display estiver ligado, atualiza a seleção visual
-                    if (display_on && current_mode == MODE_NORMAL) {
+                    // SEMPRE atualiza a seleção do botão no modo normal (mesmo se estivesse em standby)
+                    if (current_mode == MODE_NORMAL) {
                         if (current_button != i) {
                             current_button = i;
                             if (i < scroll_offset) {
@@ -81,13 +81,52 @@ void button_check_task(void *arg)
                                 scroll_offset = i - VISIBLE_BUTTONS + 1;
                             }
                         }
-                        update_display_partial();
+                        // Atualiza o display apenas se ele estiver ligado
+                        if (display_on) {
+                            update_display_partial();
+                        }
                     }
                     
                     // Enviar comando MIDI
-                    int absolute_index = get_absolute_button_index(current_page, i);
-                    midi_tx_router_send(current_commands[absolute_index].data, 
-                                        sizeof(current_commands[absolute_index].data));
+                    if (current_page < 8) {
+                        // Enviar comando MIDI do Preset
+                        int absolute_index = get_absolute_button_index(current_page, i);
+                        midi_tx_router_send(current_commands[absolute_index].data, 
+                                            sizeof(current_commands[absolute_index].data));
+                    } else {
+                        // Páginas de Effect Change
+                        int preset_abs_idx = current_page - 8;
+                        int absolute_index = get_absolute_button_index(current_page, i);
+                        
+                        if (i == 3) { 
+                            // Botão 4: Descer para o efeito do preset imediatamente anterior
+                            if (preset_abs_idx > 0) {
+                                int target_preset_idx = preset_abs_idx - 1;
+                                set_page(8 + target_preset_idx);
+                                // Envia o comando MIDI do preset anterior para atualizar a pedaleira
+                                midi_tx_router_send(current_commands[target_preset_idx].data, 
+                                                    sizeof(current_commands[target_preset_idx].data));
+                            }
+                        } else if (i == 4) { 
+                            // Botão 5: Subir para o efeito do preset imediatamente posterior
+                            if (preset_abs_idx < 79) {
+                                int target_preset_idx = preset_abs_idx + 1;
+                                set_page(8 + target_preset_idx);
+                                // Envia o comando MIDI do preset posterior para atualizar a pedaleira
+                                midi_tx_router_send(current_commands[target_preset_idx].data, 
+                                                    sizeof(current_commands[target_preset_idx].data));
+                            }
+                        } else if (i == 9) { 
+                            // Botão 10: SAIR (volta para a página de presets correspondente e seleciona o botão exato)
+                            int target_preset_page = preset_abs_idx / 10;
+                            int target_button = preset_abs_idx % 10;
+                            set_page_and_button(target_preset_page, target_button);
+                        } else {
+                            // Demais botões (1, 2, 3, 6, 7, 8, 9): enviam comando MIDI e customizáveis
+                            midi_tx_router_send(current_commands[absolute_index].data, 
+                                                sizeof(current_commands[absolute_index].data));
+                        }
+                    }
                 }
                 
                 // Resetar flags
@@ -121,7 +160,12 @@ void button_check_task(void *arg)
                             case 6: target_page = 5; break; // Botão 7 -> Página 5
                             case 7: target_page = 6; break; // Botão 8 -> Página 6
                             case 8: target_page = 7; break; // Botão 9 -> Página 7
-                            // case 9 (Botão 10): sem função por enquanto
+                            case 9: {
+                                    // Botão 10 (long press): Entra na página de Effect Change do botão atual
+                                    int preset_abs_idx = current_page * BUTTONS_PER_PAGE + current_button;
+                                    set_page(8 + preset_abs_idx);
+                                    break;
+                                }
                             default: break;
                         }
                         

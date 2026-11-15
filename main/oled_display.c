@@ -4,6 +4,7 @@
 #include <string.h>
 
 // Função pública para desenhar número grande em standby
+// Função pública para desenhar número grande em standby
 void draw_big_number_standby(void)
 {
     if (!display_initialized) return;
@@ -14,35 +15,36 @@ void draw_big_number_standby(void)
         memset(dev._page[page]._segs, 0, 128);
     }
     
-    char num_str[3];
-    snprintf(num_str, sizeof(num_str), "%d", current_page);
+    char num_str[16];
+    if (current_page < 8) {
+        snprintf(num_str, sizeof(num_str), "%d", current_page);
+    } else {
+        int preset_num = (current_page - 8) + 1;
+        if (preset_num < 10) {
+            snprintf(num_str, sizeof(num_str), "0%d", preset_num);
+        } else {
+            snprintf(num_str, sizeof(num_str), "%d", preset_num);
+        }
+    }
+    
     int text_len = strlen(num_str);
+    int start_page = (dev._pages - 6) / 2;  
     
-    // Centralizar verticalmente (x6 ocupa 6 páginas)
-    int start_page = (dev._pages - 6) / 2;  // (8 - 6) / 2 = 1
-    
-    // Para centralizar horizontalmente, precisamos calcular espaços
-    // Cada caractere ocupa 48 bytes. O display tem 128 bytes.
-    // Um dígito: (128 - 48) / 2 = 40 bytes de margem esquerda
-    // Dois dígitos: (128 - 96) / 2 = 16 bytes de margem esquerda
-    
-    // Como a função não aceita margem, vamos usar uma string com espaços
     char spaced_text[10];
     if (text_len == 1) {
-        // 1 dígito: adicionar espaços para centralizar
-        // Cada espaço ocupa 48 bytes. Precisamos de ~40 bytes de margem
-        // 1 espaço = 48 bytes (chega perto)
         spaced_text[0] = ' ';
         spaced_text[1] = num_str[0];
         spaced_text[2] = '\0';
-    } else {
+    } else if (text_len == 2) {
         spaced_text[0] = num_str[0];
         spaced_text[1] = num_str[1];
         spaced_text[2] = '\0';
+    } else {
+        // Para 3 dígitos (ex: 80)
+        strcpy(spaced_text, num_str);
     }
     
     ssd1306_display_text_x6(&dev, start_page, spaced_text, strlen(spaced_text), false);
-    
     ssd1306_show_buffer(&dev);
 }
 
@@ -64,8 +66,28 @@ void update_display_partial(void)
     switch (current_mode) {
         case MODE_NORMAL:
         {
-            char top_line[17];
-            snprintf(top_line, sizeof(top_line), "Bat:%3d%% Pg:%d/7", g_battery_percent, current_page);
+            char top_line[32]; // Aumentado para 32 para acomodar a margem de segurança do compilador
+            memset(top_line, ' ', sizeof(top_line) - 1);
+            top_line[sizeof(top_line) - 1] = '\0';
+            
+            if (current_page < 8) {
+                snprintf(top_line, sizeof(top_line), "Bat:%3d%% Pg:%d/7", g_battery_percent, current_page);
+            } else {
+                int preset_idx = current_page - 8;
+                int preset_num = preset_idx + 1;
+                if (preset_num < 10) {
+                    snprintf(top_line, sizeof(top_line), "Bat:%3d%% Ef:0%d", g_battery_percent, preset_num);
+                } else {
+                    snprintf(top_line, sizeof(top_line), "Bat:%3d%% Ef:%d", g_battery_percent, preset_num);
+                }
+            }
+            
+            // Garante exatamente 16 caracteres preenchidos com espaços (eliminando qualquer "lixo")
+            for(int k = 0; k < 16; k++) {
+                if(top_line[k] == '\0') top_line[k] = ' ';
+            }
+            top_line[16] = '\0';
+
             ssd1306_display_text(&dev, 0, top_line, 16, false);
             ssd1306_display_text(&dev, 1, "----------------", 16, false);
 
@@ -73,12 +95,16 @@ void update_display_partial(void)
             for (int i = 0; i < VISIBLE_BUTTONS; i++) {
                 int button_index = scroll_offset + i;
                 char button_line[17];
-                char *btn_ptr = button_line;
 
                 if (button_index < BUTTONS_PER_PAGE) {
                     int absolute_btn = start_btn + button_index;
                     int physical_btn_num = button_index + 1;
                     
+                    // Preenche a linha inteira de botões com espaços para evitar lixo de memória
+                    memset(button_line, ' ', 16);
+                    button_line[16] = '\0';
+
+                    char *btn_ptr = button_line;
                     *btn_ptr++ = (button_index == current_button) ? '>' : ' ';
                     *btn_ptr++ = 'B';
                     if (physical_btn_num >= 10) {
@@ -95,7 +121,7 @@ void update_display_partial(void)
                         *btn_ptr++ = "0123456789ABCDEF"[byte >> 4];
                         *btn_ptr++ = "0123456789ABCDEF"[byte & 0x0F];
                     }
-                    *btn_ptr = '\0';
+                    
                     ssd1306_display_text(&dev, 2 + i, button_line, 16, false);
                 } else {
                     ssd1306_display_text(&dev, 2 + i, "                ", 16, false);

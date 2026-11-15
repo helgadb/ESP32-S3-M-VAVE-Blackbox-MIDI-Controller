@@ -4,7 +4,7 @@
 #include "ssd1306.h"
 
 #define BUTTONS_PER_PAGE 10
-#define TOTAL_PAGES 8
+#define TOTAL_PAGES 88
 #define TOTAL_BUTTONS (BUTTONS_PER_PAGE * TOTAL_PAGES)
 #define VISIBLE_BUTTONS 5
 #define LOW_BATTERY_THRESHOLD 20
@@ -76,4 +76,5 @@ void change_page(int delta);
 void init_button_states(void);
 void draw_page_number_standby(void);
 void update_screen_by_state(void);
+void set_page_and_button(int new_page, int new_button);
 void set_page(int new_page);

@@ -32,19 +32,19 @@ static void set_default_command(int btn, uint8_t *data) {
                 data[0] = 0x0B; data[1] = 0xB0; data[2] = 0x02; data[3] = 0x00; break;
             case 2: // Botão 3: CC3 0 (DLY)
                 data[0] = 0x0B; data[1] = 0xB0; data[2] = 0x03; data[3] = 0x00; break;
-            case 3: // Botão 4: Descer para effect anterior
-                data[0] = 0x00; data[1] = 0x00; data[2] = 0x00; data[3] = 0x00; break;
-            case 4: // Botão 5: Subir para effect posterior
-                data[0] = 0x00; data[1] = 0x00; data[2] = 0x00; data[3] = 0x00; break;
+            case 3: // Botão 4: TAP TEMPO MOD (Canal 1, CC 40, Valor 127 -> 0x0B, 0xB0, 0x28, 0x7F)
+                data[0] = 0x0B; data[1] = 0xB0; data[2] = 0x28; data[3] = 0x7F; break;
+            case 4: // Botão 5: TAP TEMPO DLY (Canal 1, CC 41, Valor 127 -> 0x0B, 0xB0, 0x29, 0x7F)
+                data[0] = 0x0B; data[1] = 0xB0; data[2] = 0x29; data[3] = 0x7F; break;
             case 5: // Botão 6: CC4 0 (REV)
                 data[0] = 0x0B; data[1] = 0xB0; data[2] = 0x04; data[3] = 0x00; break;
             case 6: // Botão 7: CC1 0 (AMP)
                 data[0] = 0x0B; data[1] = 0xB0; data[2] = 0x01; data[3] = 0x00; break;
             case 7: // Botão 8: CC5 0 (CAB)
                 data[0] = 0x0B; data[1] = 0xB0; data[2] = 0x05; data[3] = 0x00; break;
-            case 8: // Botão 9: CC 23 com valor 127 (Afinador)
-                data[0] = 0x0B; data[1] = 0xB0; data[2] = 0x17; data[3] = 0x7F; break;
-            case 9: // Botão 10: SAIR
+            case 8: // Botão 9: Preset Anterior (Navegação interna)
+                data[0] = 0x00; data[1] = 0x00; data[2] = 0x00; data[3] = 0x00; break;
+            case 9: // Botão 10: Preset Posterior (Navegação interna)
                 data[0] = 0x00; data[1] = 0x00; data[2] = 0x00; data[3] = 0x00; break;
             default:
                 data[0] = 0x00; data[1] = 0x00; data[2] = 0x00; data[3] = 0x00; break;

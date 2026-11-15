@@ -76,3 +76,4 @@ void change_page(int delta);
 void init_button_states(void);
 void draw_page_number_standby(void);
 void update_screen_by_state(void);
+void set_page(int new_page);

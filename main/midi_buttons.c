@@ -108,15 +108,25 @@ void button_check_task(void *arg)
                     // Atualizar apenas timer da CPU, NÃO o timer do display
                     last_cpu_activity_time = xTaskGetTickCount();
                     
-                    // Mudar página
-                    if (i == PAGE_UP_BUTTON_IDX) {
-                        if (current_mode == MODE_NORMAL) {
-                            change_page(1);
+                    // Mudar página por mapeamento direto de long press
+                    if (current_mode == MODE_NORMAL) {
+                        int target_page = -1;
+                        switch (i) {
+                            case 0: target_page = 0; break; // Botão 1 -> Página 0
+                            case 1: target_page = 1; break; // Botão 2 -> Página 1
+                            case 2: target_page = 2; break; // Botão 3 -> Página 2
+                            case 3: target_page = 3; break; // Botão 4 -> Página 3
+                            // case 4 (Botão 5): sem função por enquanto
+                            case 5: target_page = 4; break; // Botão 6 -> Página 4
+                            case 6: target_page = 5; break; // Botão 7 -> Página 5
+                            case 7: target_page = 6; break; // Botão 8 -> Página 6
+                            case 8: target_page = 7; break; // Botão 9 -> Página 7
+                            // case 9 (Botão 10): sem função por enquanto
+                            default: break;
                         }
-                    }
-                    else if (i == PAGE_DOWN_BUTTON_IDX) {
-                        if (current_mode == MODE_NORMAL) {
-                            change_page(-1);
+                        
+                        if (target_page != -1) {
+                            set_page(target_page);
                         }
                     }
                 }

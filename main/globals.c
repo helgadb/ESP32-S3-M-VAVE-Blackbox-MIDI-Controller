@@ -112,3 +112,15 @@ void change_page(int delta) {
         update_screen_by_state();
     }
 }
+
+void set_page(int new_page) {
+    if (new_page >= 0 && new_page < TOTAL_PAGES && new_page != current_page) {
+        current_page = new_page;
+        current_button = 0;
+        scroll_offset = 0;
+        
+        last_cpu_activity_time = xTaskGetTickCount();
+        
+        update_screen_by_state();
+    }
+}
